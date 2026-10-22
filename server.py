@@ -2,6 +2,8 @@ import json
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
+from tools import *
+
 class MCPHandler(SimpleHTTPRequestHandler):
     def send_json(self, status, response):
         body = json.dumps(response).encode("utf-8")
@@ -31,15 +33,122 @@ class MCPHandler(SimpleHTTPRequestHandler):
 
         print("Received request:", request)
 
-        response = {
-            "jsonrpc": "2.0",
-            "id": request.get("id"),    # same id for request and response
-            "result": {
-                "message": "Hello World!"
-            }
-        }
+        if request.get("jsonrpc") == "2.0":
+            if request.get("method") == "initialize":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request.get("id"),
+                    "result": {
+                        "protocolVersion": "2026-07-28",
+                        "capabilities": {
+                        "tools": {
+                            "listChanged": False
+                        }
+                        },
+                        "serverInfo": {
+                        "name": "my-mcp-server",
+                        "version": "1.0.0"
+                        }
+                    }
+                    }
+                self.send_json(200, response)
+                return
 
-        self.send_json(200, response)
+            elif request.get("method") == "tools/list":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request.get("id"),
+                    "result": {
+                        "tools": [
+                            {
+                                "name": "today",
+                                "description": "Return today's date",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "format": {
+                                        "type": "string",
+                                        "description": "strftime() string"
+                                        }
+                                    },
+                                "required": ["format"]
+                                }
+                            }
+                        ]
+                    }
+                }
+                self.send_json(200, response)
+                return
+
+            elif request.get("method") == "tools/call":
+                params = request.get("params", {})
+                name = params.get("name")
+                args = params.get("arguments", {})
+
+                if name == "today":
+                    format = args.get("format")
+                    formatted_date = today(format)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": request.get("id"),
+                        "result": {
+                                "content": [
+                            {
+                                "type": "text",
+                                "text": formatted_date
+                            }
+                        ],
+                        "isError": False
+                        }
+                    }
+                    self.send_json(200, response)
+
+                else:
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": request.get("id"),
+                        "error": {
+                            "code": -32601,
+                            "message": "Tool not found"
+                        }
+                    }
+                    self.send_json(404, response)
+                    return
+
+            elif request.get("method") == "unknown_method":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request.get("id"),
+                    "error": {
+                        "code": -32601,
+                        "message": "Method not found"
+                    }
+                    }
+                self.send_json(404, response)
+                return
+
+            else:
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request.get("id"),    # same id for request and response
+                    "result": {
+                        "message": "Hello World!"
+                    }
+                }
+
+                self.send_json(200, response)
+
+        else:
+            response = {
+                "jsonrpc": "2.0",
+                "id": request.get("id"),
+                "error": {
+                    "code": -32600,
+                    "message": "Invalid Request"
+                }
+            }
+            self.send_json(400, response)
 
 server = HTTPServer(("localhost", 8000), MCPHandler)
 server.serve_forever()
