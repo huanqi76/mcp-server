@@ -103,6 +103,25 @@ class MCPHandler(SimpleHTTPRequestHandler):
                         }
                     }
                     self.send_json(200, response)
+                
+                elif name == "weekday":
+                    date_string = args.get("date")  # is string in right format?
+                    weekday_result = weekday(date_string)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "id": request.get("id"),
+                        "result": {
+                                "content": [
+                            {
+                                "type": "text",
+                                "text": weekday_result
+                            }
+                        ],
+                        "isError": False
+                        }
+                    }
+                    self.send_json(200, response)
 
                 else:
                     response = {
