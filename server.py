@@ -105,8 +105,22 @@ class MCPHandler(SimpleHTTPRequestHandler):
                     self.send_json(200, response)
                 
                 elif name == "weekday":
-                    date_string = args.get("date")  # is string in right format?
-                    weekday_result = weekday(date_string)
+                    date_string = args.get("date")
+                    if not isinstance(date_string, str):   
+                        # TODO
+                        # technically will say "date must be string"
+                        # when data field is not included
+
+                        weekday_result = "Date must be a string"
+                        is_error = True
+
+                    else:
+                        try: 
+                            weekday_result = weekday(date_string)
+                            is_error = False
+                        except ValueError:
+                            weekday_result = "Invalid date"
+                            is_error = True
 
                     response = {
                         "jsonrpc": "2.0",
@@ -118,10 +132,10 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                 "text": weekday_result
                             }
                         ],
-                        "isError": False
+                        "isError": is_error
                         }
                     }
-                    self.send_json(200, response)
+                    self.send_json(200, response)   # two kinds of error: HTTP error and MCP tool
 
                 else:
                     response = {
