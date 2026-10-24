@@ -159,7 +159,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                         "tools": [
                             {
                                 "name": "today",
-                                "description": "Returns today's date (date only, no time of day) using a Python strftime() format string. Leave format blank to get 2026-10-24 style output. Examples: '%Y-%m-%d' gives 2026-10-24; '%A, %B %d, %Y' gives Saturday, October 24, 2026; '%d/%m/%y' gives 24/10/26.",
+                                "description": "Returns today's date. Default 2026-10-24 via '%Y-%m-%d'",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
@@ -174,7 +174,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                             },
                             {
                                 "name": "weekday",
-                                "description": "Returns the day of the week (Monday to Sunday) for a date. The date must be written as YYYY-MM-DD with zeros, e.g. 2026-07-28 returns Tuesday and 2000-01-01 returns Saturday.",
+                                "description": "Returns the day of the week a date. e.g. 2026-10-24 returns Saturday",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
@@ -190,7 +190,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                             },
                             {
                                 "name": "timer",
-                                "description": "Egg timer. Waits the given number of seconds, streaming a progress update every 10 seconds, then returns an alarm message. It takes real time: alarm=25 sends updates at 10s and 20s, and the alarm at 25s. Updates arrive as notifications while the call runs (look for the notifications/progress entries in the inspector); the final result arrives when the timer ends.",
+                                "description": "Streams a progress update every 10 seconds until alarm",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
@@ -207,13 +207,13 @@ class MCPHandler(BaseHTTPRequestHandler):
                             },
                             {
                                 "name": "calculator",
-                                "description": "Evaluates an arithmetic expression with the bc calculator (run as bc -l). Operators: + - * / ^ (power) and parentheses. Use ^ for powers, not **. Avoid % because it does not give a whole-number remainder in this mode. Functions: sqrt(x), s(x) sine, c(x) cosine, a(x) arctan, l(x) natural log, e(x) e to the x. Decimals print without a leading zero (.5, not 0.5). Examples: '2+3*4' gives 14; '(2+3)*4' gives 20; '2^10' gives 1024; '10/3' gives 3.33333333333333333333; 'sqrt(2)' gives 1.41421356237309504880.",
+                                "description": "Evaluates an arithmetic expression",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
                                         "expression": {
                                             "type": "string",
-                                            "description": "One bc expression as plain text, e.g. (2+3)*4. Words like 'two plus two' won't work, and assignments like x=5 print nothing so they return an error.",
+                                            "description": "One bc expression as plain text, e.g. (2+3)*4",
                                             "examples": ["2+3*4", "(2+3)*4", "2^10", "10/3", "sqrt(2)"]
                                         }
                                     },
