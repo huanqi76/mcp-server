@@ -14,6 +14,17 @@ class MCPHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_sse_headers(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+
+    def send_sse_event(self, message):
+        self.wfile.write(f"data: {message}\n\n".encode("utf-8"))
+        self.wfile.flush()
+
     def do_GET(self):
         response = {
             "message": "Hello World!"
@@ -72,6 +83,34 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                         }
                                     },
                                 "required": ["format"]
+                                }
+                            },
+                            {
+                                "name": "weekday",
+                                "description": "Return the weekday for given date",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "description": "Date"
+                                        }
+                                    },
+                                "required": ["date"]
+                                }
+                            },
+                            {
+                                "name": "timer",
+                                "description": "Sends an update every ten seconds until alarm",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "alarm": {
+                                            "type": "integer",
+                                            "description": "number of seconds before timer"
+                                        }
+                                    },
+                                "required": ["alarm"]
                                 }
                             }
                         ]
@@ -136,6 +175,34 @@ class MCPHandler(SimpleHTTPRequestHandler):
                         }
                     }
                     self.send_json(200, response)   # two kinds of error: HTTP error and MCP tool
+
+                elif name == "timer":
+                    alarm = args.get("alarm")
+
+                    if not isinstance(alarm, int) or alarm < 1:
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request.get("id"),
+                            "result": {
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "Alarm must be a positive integer"
+                                    }
+                                ],
+                                "isError": True
+                            }
+                        }
+                        self.send_json(200, response)
+                        return
+
+                    else:
+                        self.send_sse_headers()
+                        run_timer(alarm, self.send_sse_event)
+                        self.wfile.flush()
+                        self.close_connection = True
+                        return
+
 
                 else:
                     response = {
