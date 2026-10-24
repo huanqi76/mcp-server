@@ -1,4 +1,5 @@
 import json
+import subprocess
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
@@ -93,7 +94,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                     "properties": {
                                         "date": {
                                             "type": "string",
-                                            "description": "Date"
+                                            "description": "date"
                                         }
                                     },
                                 "required": ["date"]
@@ -111,6 +112,20 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                         }
                                     },
                                 "required": ["alarm"]
+                                }
+                            },
+                            {
+                                "name": "calculator",
+                                "description": "Calculates given expression",
+                                "inputSchema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "expression": {
+                                            "type": "string",
+                                            "description": "expression to evaluate"
+                                        }
+                                    },
+                                "required": ["expression"]
                                 }
                             }
                         ]
@@ -203,7 +218,59 @@ class MCPHandler(SimpleHTTPRequestHandler):
                         self.close_connection = True
                         return
 
+                elif name == "calculator":
+                    expression = args.get("expression")
 
+                    if not isinstance(expression, str) or not expression.strip():
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request.get("id"),
+                            "result": {
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "Expression must be non-empty string"
+                                    }
+                                ],
+                                "isError": True
+                            }
+                        }
+                        self.send_json(200, response)
+                        return
+
+                    try:
+                        answer = calculator(expression)
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request.get("id"),
+                            "result": {
+                                "content": [
+                                    {
+                                        "type": "text",      # not necessarily integer?
+                                        "text": answer
+                                    }
+                                ],
+                                "isError": False
+                            }
+                        }
+                        self.send_json(200, response)
+
+                    except (ValueError, subprocess.SubprocessError) as e:
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": request.get("id"),
+                            "result": {
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": str(e)
+                                    }
+                                ],
+                                "isError": True
+                            }
+                        }
+                        self.send_json(200, response)
+                
                 else:
                     response = {
                         "jsonrpc": "2.0",
