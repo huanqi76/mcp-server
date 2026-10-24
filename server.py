@@ -1,7 +1,9 @@
 import json
+import base64
 import subprocess
 
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+from urllib.parse import urlparse
 
 from tools import *
 
@@ -14,27 +16,57 @@ class MCPHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+    
+    def send_rpc_error(self, status, request_id, code, message, data=None):
+        error = {"code": code, "message": message}
+        if data is not None:
+            error["data"] = data
+ 
+        self.send_json(status, {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": error
+        })
 
     def send_sse_headers(self):
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")
         self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
 
     def send_sse_event(self, message):
         self.wfile.write(f"data: {message}\n\n".encode("utf-8"))
         self.wfile.flush()
 
-    def do_GET(self):
-        response = {
-            "message": "Hello World!"
-        }
+    # def do_GET(self):
+    #     response = {
+    #         "message": "Hello World!"
+    #     }
 
-        self.send_json(200, response)
+        # self.send_json(200, response)
     
     def do_POST(self):
+        origin = self.headers.get("Origin")
         content_length = int(self.headers.get("Content-Length"))
+
+        if origin is not None and urlparse(origin).hostname not in ("localhost", "127.0.0.1", "::1", "compute24.cs.columbia.edu"):
+            self.send_rpc_error(403, None, -32600, "Origin not allowed")
+            return
+
+        if urlparse(self.path).path not in ("/", "/mcp"):
+            self.send_rpc_error(404, None, -32600, "Unknown endpoint, use /mcp")
+            return
+ 
+        try:
+            content_length = int(self.headers.get("Content-Length"))
+        except (TypeError, ValueError):
+            content_length = 0
+ 
+        if content_length <= 0 or content_length > 1000000:
+            self.send_rpc_error(400, None, -32700, "Missing, empty or oversized request body")
+            return
+        
         request_body = self.rfile.read(content_length)  # read() expects number of bytes, not a string
 
         try:
@@ -71,6 +103,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                     "jsonrpc": "2.0",
                     "id": request.get("id"),
                     "result": {
+                        "resultType": "complete",
                         "tools": [
                             {
                                 "name": "today",
@@ -108,7 +141,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                     "properties": {
                                         "alarm": {
                                             "type": "integer",
-                                            "description": "number of seconds before timer"
+                                            "description": "number of seconds for timer"
                                         }
                                     },
                                 "required": ["alarm"]
@@ -128,7 +161,9 @@ class MCPHandler(SimpleHTTPRequestHandler):
                                 "required": ["expression"]
                                 }
                             }
-                        ]
+                        ],
+                        "ttlMs": 0,
+                        "cacheScope": "private"
                     }
                 }
                 self.send_json(200, response)
@@ -147,6 +182,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                         "jsonrpc": "2.0",
                         "id": request.get("id"),
                         "result": {
+                            "resultType": "complete",
                                 "content": [
                             {
                                 "type": "text",
@@ -180,7 +216,8 @@ class MCPHandler(SimpleHTTPRequestHandler):
                         "jsonrpc": "2.0",
                         "id": request.get("id"),
                         "result": {
-                                "content": [
+                            "resultType": "complete",
+                            "content": [
                             {
                                 "type": "text",
                                 "text": weekday_result
@@ -199,6 +236,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                             "jsonrpc": "2.0",
                             "id": request.get("id"),
                             "result": {
+                                "resultType": "complete",
                                 "content": [
                                     {
                                         "type": "text",
@@ -226,6 +264,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                             "jsonrpc": "2.0",
                             "id": request.get("id"),
                             "result": {
+                                "resultType": "complete",
                                 "content": [
                                     {
                                         "type": "text",
@@ -244,6 +283,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                             "jsonrpc": "2.0",
                             "id": request.get("id"),
                             "result": {
+                                "resultType": "complete",
                                 "content": [
                                     {
                                         "type": "text",      # not necessarily integer?
@@ -260,6 +300,7 @@ class MCPHandler(SimpleHTTPRequestHandler):
                             "jsonrpc": "2.0",
                             "id": request.get("id"),
                             "result": {
+                                "resultType": "complete",
                                 "content": [
                                     {
                                         "type": "text",
@@ -295,6 +336,28 @@ class MCPHandler(SimpleHTTPRequestHandler):
                 self.send_json(404, response)
                 return
 
+            elif request.get("method") == "server/discover":
+                response = {
+                    "jsonrpc": "2.0",
+                    "id": request.get("id"),
+                    "result": {
+                        "resultType": "complete",
+                        "supportedVersions": ["2026-07-28"],
+                        "capabilities": {
+                            "tools": {}
+                        },
+                        "_meta": {
+                            "io.modelcontextprotocol/serverInfo": {
+                                "name": "my-mcp-server",
+                                "version": "1.0.0"
+                            }
+                        }
+                    }
+                }
+
+                self.send_json(200, response)
+                return
+
             else:
                 response = {
                     "jsonrpc": "2.0",
@@ -317,5 +380,5 @@ class MCPHandler(SimpleHTTPRequestHandler):
             }
             self.send_json(400, response)
 
-server = HTTPServer(("localhost", 8000), MCPHandler)
+server = HTTPServer(("0.0.0.0", 8123), MCPHandler)
 server.serve_forever()
