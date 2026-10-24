@@ -165,7 +165,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                                     "properties": {
                                         "format": {
                                             "type": "string",
-                                            "description": "strftime() format string. Optional, defaults to %Y-%m-%d. Try: %A, %B %d, %Y",
+                                            "description": "Defaults to %Y-%m-%d, %A, %B %d, %Y, ...",
                                             "default": "%Y-%m-%d",
                                             "examples": ["%Y-%m-%d", "%A, %B %d, %Y", "%d/%m/%y"]
                                         }
@@ -196,7 +196,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                                     "properties": {
                                         "alarm": {
                                             "type": "integer",
-                                            "description": "Whole number of seconds to wait, 1 to 3600. Try 25 to see two updates before the alarm. Under 10 gives no updates, just the alarm.",
+                                            "description": "Whole number of seconds for alarm",
                                             "minimum": 1,
                                             "maximum": 3600,
                                             "examples": [25]
@@ -213,7 +213,7 @@ class MCPHandler(BaseHTTPRequestHandler):
                                     "properties": {
                                         "expression": {
                                             "type": "string",
-                                            "description": "One bc expression as plain text, e.g. (2+3)*4",
+                                            "description": "An expression as plain text, e.g. (2+3)*4",
                                             "examples": ["2+3*4", "(2+3)*4", "2^10", "10/3", "sqrt(2)"]
                                         }
                                     },
