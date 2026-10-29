@@ -488,5 +488,5 @@ class MCPHandler(BaseHTTPRequestHandler):
             rid = request.get("id") if isinstance(request, dict) else None
             self.send_rpc_error(400, rid, -32600, "Invalid Request")
 
-server = ThreadingHTTPServer(("0.0.0.0", 8124), MCPHandler)
+server = ThreadingHTTPServer(("0.0.0.0", 10037), MCPHandler)
 server.serve_forever()
