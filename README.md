@@ -1,6 +1,6 @@
 # mcp-server
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server in plain Python. No SDK, no dependencies.
+A [Model Context Protocol](https://modelcontextprotocol.io) server in plain Python. 
 
 It speaks the stateless `2026-07-28` HTTP revision: POST only, no sessions, and the protocol version, method, and tool name in the headers must match the body.
 
